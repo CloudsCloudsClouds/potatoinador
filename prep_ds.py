@@ -98,7 +98,7 @@ if __name__ == "__main__":
     prepare_image_datasets(
         potato_dataset_slug="misrakahmed/vegetable-image-dataset",
         rock_dataset_slug="neelgajare/rocks-dataset",
-        neither_dataset_slug="pascal-voc/pascal-voc-2012",
+        neither_dataset_slug="mathurinache/gpr1200-dataset",
         num_rock_samples=1000,
         num_neither_samples=1000,
     )
