@@ -11,11 +11,12 @@ MODEL_PATH = "potato_rock_classifier.pth"
 IMG_SIZE = (224, 224)
 # The class names must be in the same order as determined by ImageFolder during training
 # You can verify this from the output of `train.py`: `Class to index mapping: {'potato': 0, 'rock': 1}`
-CLASS_NAMES = ["potato", "rock"]
+CLASS_NAMES = ["neither", "potato", "rock"]
 NUM_CLASSES = len(CLASS_NAMES)
 
 # --- Model Setup ---
 print("Loading the Potato Rock Detector model...")
+print(f"Number of classes: {NUM_CLASSES}")
 
 # Set the device to a GPU if available, otherwise use the CPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
