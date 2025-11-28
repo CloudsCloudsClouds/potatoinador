@@ -11,3 +11,6 @@ wheels/
 
 # Big file
 *.pth
+
+# Very big dataset
+data/
