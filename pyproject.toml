@@ -1,0 +1,12 @@
+[project]
+name = "potatoinador"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "kagglehub>=0.3.13",
+    "polars>=1.35.2",
+    "torch>=2.9.1",
+    "torchvision>=0.24.1",
+]
