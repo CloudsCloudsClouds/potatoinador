@@ -8,6 +8,7 @@ dependencies = [
     "kagglehub>=0.3.13",
     "opencv-python>=4.12.0.88",
     "polars>=1.35.2",
+    "pyserial>=3.5",
     "torch>=2.9.1",
     "torchvision>=0.24.1",
 ]
