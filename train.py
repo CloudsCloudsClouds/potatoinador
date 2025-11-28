@@ -8,7 +8,7 @@ from torchvision import datasets, models, transforms
 
 BATCH_SIZE = 32
 IMG_SIZE = (224, 224)
-NUM_EPOCHS = 5  # Change this thing if things are bad
+NUM_EPOCHS = 10  # Change this thing if things are bad
 LEARNING_RATE = 0.001
 MODEL_SAVE_PATH = "potato_rock_classifier.pth"
 
@@ -42,7 +42,7 @@ comb_loader = DataLoader(
     comb_ds,
     batch_size=BATCH_SIZE,
     shuffle=True,
-    num_workers=4,  # Just put 4, it's good enough
+    num_workers=2,  # Just put 4, it's good enough
 )
 
 print(f"Number of images in combined dataset: {len(comb_ds)}")
