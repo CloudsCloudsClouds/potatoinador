@@ -8,7 +8,7 @@ import kagglehub
 def prepare_image_datasets(
     potato_dataset_slug: str,
     rock_dataset_slug: str,
-    output_base_dir: str = "potatoinador/data/combined_dataset",
+    output_base_dir: str = "data/combined_dataset",
     num_rock_samples: int = 1000,
 ):
     """
