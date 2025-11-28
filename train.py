@@ -1,53 +1,130 @@
 import os
 
-import kagglehub
-import polars as pl
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, models, transforms
-from torchvision.datasets.folder import IMG_EXTENSIONS
 
 BATCH_SIZE = 32
-IMG_SIZE = (180, 180)
+IMG_SIZE = (224, 224)
+NUM_EPOCHS = 5  # Change this thing if things are bad
+LEARNING_RATE = 0.001
+MODEL_SAVE_PATH = "potato_rock_classifier.pth"
 
-# So far so good...
-# Let's get the latest datasets.
-rock_path = kagglehub.dataset_download("neelgajare/rocks-dataset")
-print("Path to rocks files:", rock_path)
-potato_path = kagglehub.dataset_download("misrakahmed/vegetable-image-dataset")
-print("Path to vegetables files:", potato_path)
+# Data loading
+print("Setting up data transformations and loaders...")
 
-# Here the fun thing. Let's get just the potatoes.
-
-data_dir = os.path.join(potato_path, "Vegetable Images", "train", "Potato")
-print(data_dir)
-
-for root, dirs, files in os.walk(data_dir):
-    for file in files:
-        print(f"Directory: {root}")
-        print(f"Subdirectories: {dirs}")
-        print(f"Files: {files[:10]}...")
-
-# potato_train_ds = tf.keras.utils.image_dataset_from_directory
-# It was easy in tensorflow...
-# I wonder what would I do now? I'm using pytorch
-
+# Define the transformations for the input images
 transform = transforms.Compose(
     [
-        transforms.Resize((224, 224)),
+        transforms.Resize(IMG_SIZE),
         transforms.ToTensor(),
+        # Normalization values are standard for models pre-trained on ImageNet
+        # I have no idea why use these values, but it's also in the docs and the IA uses it so...
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]
 )
 
-potato_train_ds = datasets.ImageFolder(root=data_dir, transform=transform)
+# Load the dataset from the organized folder structure
+# After running prep_ds.py
+comb_ds_path = "data/combined_dataset"
+try:
+    comb_ds = datasets.ImageFolder(comb_ds_path, transform=transform)
+except FileNotFoundError:
+    print(f"Error: Dataset not found at '{comb_ds_path}'.")
+    print("Please make sure you have run the dataset preparation script first.")
+    exit()
 
-potato_loader = DataLoader(
-    potato_train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4
+
+# Create a DataLoader to iterate over the dataset in batches
+comb_loader = DataLoader(
+    comb_ds,
+    batch_size=BATCH_SIZE,
+    shuffle=True,
+    num_workers=4,  # Just put 4, it's good enough
 )
 
-print(f"Number of potato images: {len(potato_train_ds)}")
-print(f"Classes found: {potato_train_ds.classes}")
-print(f"Class to index mapping: {potato_train_ds.class_to_idx}")
+print(f"Number of images in combined dataset: {len(comb_ds)}")
+print(f"Classes found: {comb_ds.classes}")
+print(f"Class to index mapping: {comb_ds.class_to_idx}")
+num_classes = len(comb_ds.classes)
+
+
+# Transform learning!
+print("\nSetting up the model...")
+
+# Set the device to a GPU if available, otherwise use the CPU
+# It's cool. Prob shouldn't be used for raspberry pi.
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
+# Load a pre-trained MobileNetV3 model
+# Using the recommended 'weights' parameter instead of 'pretrained'
+model = models.mobilenet_v3_large(
+    weights=models.MobileNet_V3_Large_Weights.IMAGENET1K_V2
+)
+
+# Freeze all the parameters in the pre-trained model
+# Also standar for tensorflow version
+for param in model.parameters():
+    param.requires_grad = False
+
+# Rebuild the classifier head for our specific task.
+# This is a robust way to avoid type-checking issues with in-place modification.
+num_ftrs = model.classifier[0].in_features
+model.classifier = nn.Sequential(
+    nn.Linear(num_ftrs, 1280),  # Ignore this, it works either way.
+    nn.Hardswish(),
+    nn.Dropout(p=0.2, inplace=True),
+    nn.Linear(1280, num_classes),
+)
+
+# Move the model to the selected device
+model = model.to(device)
+
+# Optimizer and loss function
+print("Defining loss function and optimizer...")
+criterion = nn.CrossEntropyLoss()
+
+# Just touch the outer
+optimizer = optim.Adam(model.classifier.parameters(), lr=LEARNING_RATE)
+
+
+# --- Training Loop ---
+print(f"\nStarting training for {NUM_EPOCHS} epochs...")
+
+for epoch in range(NUM_EPOCHS):
+    running_loss = 0.0
+    for i, (inputs, labels) in enumerate(comb_loader):
+        # Move data to the selected device
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+
+        # Zero the parameter gradients
+        optimizer.zero_grad()
+
+        # Forward pass
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+
+        # Backward pass and optimize
+        loss.backward()
+        optimizer.step()
+
+        # Print statistics
+        running_loss += loss.item()
+        if (i + 1) % 20 == 0:  # Print every 20 batches
+            print(
+                f"Epoch [{epoch + 1}/{NUM_EPOCHS}], Step [{i + 1}/{len(comb_loader)}], Loss: {running_loss / 20:.4f}"
+            )
+            running_loss = 0.0
+
+print("\nFinished Training!")
+
+
+# --- Save the Model ---
+print(f"Saving model state to {MODEL_SAVE_PATH}...")
+# We save the model's state_dict, which contains all the learned weights and parameters
+torch.save(model.state_dict(), MODEL_SAVE_PATH)
+print("Model saved successfully.")
