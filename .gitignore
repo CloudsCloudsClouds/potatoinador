@@ -12,6 +12,6 @@ wheels/
 # Big file
 *.pth
 *.onnx
-
+*.onnx.data
 # Very big dataset
 data/
