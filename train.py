@@ -130,7 +130,10 @@ torch.save(model.state_dict(), MODEL_SAVE_PATH)
 print("Model saved successfully.")
 
 # Now, to export to onnx
-example_inputs = (torch.randn(1, 3, 224, 224),)
-onnx_program = torch.onnx.export(model, example_inputs, dynamo=True)
-
-onnx_program.save("potato_rock_classifier.onnx")
+torch.onnx.export(
+    model,
+    (torch.rand(1, 3, 224, 224).to(device)),
+    "potato_rock_classifier.onnx",
+    export_params=True,
+    opset_version=18,
+)

@@ -1,16 +1,17 @@
 import time
 
 import cv2
+import numpy as np
+import onnxruntime as ort
 import serial
 import torch
-import torch.nn as nn
 from PIL import Image
-from torchvision import models, transforms
+from torchvision import transforms
 
 # --- Configuration ---
 
 # -- Model and Image Settings --
-MODEL_PATH = "potato_rock_classifier.pth"
+MODEL_PATH = "potato_rock_classifier.onnx"
 IMG_SIZE = (224, 224)
 # IMPORTANT: The class names must match the order from your 3-class training.
 # Check the `Class to index mapping` output from `train.py`.
@@ -41,37 +42,29 @@ except serial.SerialException as e:
 
 
 # --- Model Setup ---
-print("\nLoading the Potato Rock Detector model...")
+print("\nLoading the Potato Rock Detector ONNX model...")
 
-# Set the device to a GPU if available, otherwise use the CPU
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-
-# 1. Initialize the model architecture (must be identical to the training script)
-model = models.mobilenet_v3_large(weights=None)
-
-# Rebuild the classifier head for 3 classes
-num_ftrs = model.classifier[0].in_features
-model.classifier = nn.Sequential(
-    nn.Linear(num_ftrs, 1280),
-    nn.Hardswish(),
-    nn.Dropout(p=0.2, inplace=True),
-    nn.Linear(1280, NUM_CLASSES),
-)
-
-# 2. Load the saved weights (the state_dict)
 try:
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
-except FileNotFoundError:
-    print(f"Error: Model file not found at '{MODEL_PATH}'.")
-    print("Please run train.py to create the model file first.")
+    # Check for GPU provider
+    providers = ort.get_available_providers()
+    provider = (
+        "CUDAExecutionProvider"
+        if "CUDAExecutionProvider" in providers
+        else "CPUExecutionProvider"
+    )
+    print(f"Using ONNX Runtime provider: {provider}")
+    ort_session = ort.InferenceSession(MODEL_PATH, providers=[provider])
+except Exception as e:
+    print(f"Error loading ONNX model: {e}")
+    print(
+        f"Please ensure the model file '{MODEL_PATH}' exists and is a valid ONNX model."
+    )
+    print("You may need to run export_onnx.py first.")
     exit()
 
+# Get the input name for the model
+input_name = ort_session.get_inputs()[0].name
 
-# 3. Set the model to evaluation mode
-# This is crucial as it disables layers like Dropout for inference
-model.eval()
-model = model.to(device)
 print("Model loaded successfully!")
 
 
@@ -111,17 +104,20 @@ while True:
 
     # Apply transformations and add a batch dimension
     input_tensor = transform(pil_image)
-    input_batch = input_tensor.unsqueeze(0).to(device)
+    input_batch = input_tensor.unsqueeze(0).numpy()
 
-    # 2. Perform inference
-    with torch.no_grad():
-        output = model(input_batch)
+    # 2. Perform inference with ONNX Runtime
+    ort_outs = ort_session.run(None, {input_name: input_batch})
+    output = ort_outs[0]
 
-    # 3. Get prediction and confidence
-    probabilities = torch.nn.functional.softmax(output[0], dim=0)
-    confidence, cat_id = torch.max(probabilities, 0)
+    # 3. Get prediction and confidence from the output logits
+    # The output is a numpy array. We apply softmax to get probabilities.
+    exp_scores = np.exp(output[0] - np.max(output[0]))
+    probabilities = exp_scores / np.sum(exp_scores, axis=0)
+
+    cat_id = np.argmax(probabilities)
     class_name = CLASS_NAMES[cat_id]
-    confidence_score = confidence.item()
+    confidence_score = probabilities[cat_id]
 
     # 4. Implement State-Change Serial Communication
     if ser:
