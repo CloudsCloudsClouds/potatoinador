@@ -128,3 +128,9 @@ print(f"Saving model state to {MODEL_SAVE_PATH}...")
 # We save the model's state_dict, which contains all the learned weights and parameters
 torch.save(model.state_dict(), MODEL_SAVE_PATH)
 print("Model saved successfully.")
+
+# Now, to export to onnx
+example_inputs = (torch.randn(1, 3, 224, 224),)
+onnx_program = torch.onnx.export(model, example_inputs, dynamo=True)
+
+onnx_program.save("potato_rock_classifier.onnx")
