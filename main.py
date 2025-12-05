@@ -20,7 +20,7 @@ NUM_CLASSES = len(CLASS_NAMES)
 
 # -- Arduino Serial Communication Settings --
 # Your Arduino's serial port on Linux
-SERIAL_PORT = "/dev/ttyACM0"
+SERIAL_PORT = "/dev/ttyACM1"
 BAUD_RATE = 9600
 
 
