@@ -42,7 +42,7 @@ comb_loader = DataLoader(
     comb_ds,
     batch_size=BATCH_SIZE,
     shuffle=True,
-    num_workers=2,  # Just put 4, it's good enough
+    num_workers=2,  # Just put ~~4~~ 2, it's good enough
 )
 
 print(f"Number of images in combined dataset: {len(comb_ds)}")
@@ -67,6 +67,7 @@ model = models.mobilenet_v3_large(
 
 # Freeze all the parameters in the pre-trained model
 # Also standar for tensorflow version
+# This detaches the head that works well and we attach a body later
 for param in model.parameters():
     param.requires_grad = False
 
@@ -74,10 +75,13 @@ for param in model.parameters():
 # This is a robust way to avoid type-checking issues with in-place modification.
 num_ftrs = model.classifier[0].in_features
 model.classifier = nn.Sequential(
-    nn.Linear(num_ftrs, 1280),  # Ignore this, it works either way.
-    nn.Hardswish(),
-    nn.Dropout(p=0.2, inplace=True),
-    nn.Linear(1280, num_classes),
+    nn.Linear(num_ftrs, 256),  # Thinking layer.
+    nn.Hardswish(),  # Activator. Adds non linearity. It's a bit weird to explain, but basically "if it's interesting, amplify it, if not, squash it."
+    nn.Dropout(
+        p=0.2, inplace=True
+    ),  # Randomly drop some neurons to prevent overfitting
+    nn.Linear(256, num_classes),  # Final decision layer.
+    # 256 is good enough here. It's a 3 class clasifier!
 )
 
 # Move the model to the selected device
@@ -88,6 +92,9 @@ print("Defining loss function and optimizer...")
 criterion = nn.CrossEntropyLoss()
 
 # Just touch the outer
+# If I were to optim the whole model, it would look like
+# optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+# But training the body is the important part. The head is good enough.
 optimizer = optim.Adam(model.classifier.parameters(), lr=LEARNING_RATE)
 
 

@@ -12,10 +12,10 @@ print(f"Using device: {device}")
 model = models.mobilenet_v3_large(weights=None)
 num_ftrs = model.classifier[0].in_features
 model.classifier = nn.Sequential(
-    nn.Linear(num_ftrs, 1280),
+    nn.Linear(num_ftrs, 256),
     nn.Hardswish(),
     nn.Dropout(p=0.2, inplace=True),
-    nn.Linear(1280, NUM_CLASSES),
+    nn.Linear(256, NUM_CLASSES),
 )
 
 try:

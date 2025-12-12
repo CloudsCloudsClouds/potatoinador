@@ -4,7 +4,6 @@ import cv2
 import numpy as np
 import onnxruntime as ort
 import serial
-import torch
 from PIL import Image
 from torchvision import transforms
 
@@ -104,7 +103,7 @@ while True:
 
     # Apply transformations and add a batch dimension
     input_tensor = transform(pil_image)
-    input_batch = input_tensor.unsqueeze(0).numpy()
+    input_batch = input_tensor.unsqueeze(0).numpy()  # pyright: ignore[reportAttributeAccessIssue]
 
     # 2. Perform inference with ONNX Runtime
     ort_outs = ort_session.run(None, {input_name: input_batch})
@@ -112,7 +111,7 @@ while True:
 
     # 3. Get prediction and confidence from the output logits
     # The output is a numpy array. We apply softmax to get probabilities.
-    exp_scores = np.exp(output[0] - np.max(output[0]))
+    exp_scores = np.exp(output[0] - np.max(output[0]))  # pyright: ignore[reportIndexIssue]
     probabilities = exp_scores / np.sum(exp_scores, axis=0)
 
     cat_id = np.argmax(probabilities)

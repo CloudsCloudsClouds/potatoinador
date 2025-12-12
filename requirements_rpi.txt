@@ -1,0 +1,23 @@
+# Raspberry Pi 4 Requirements for Potato/Rock Separator
+# =====================================================
+# Install with: pip install -r requirements_rpi.txt
+
+# Core dependencies
+numpy>=1.24.0
+opencv-python>=4.8.0
+Pillow>=10.0.0
+
+# ONNX Runtime for ARM/Raspberry Pi
+# Use the standard CPU version (no GPU support on RPi)
+onnxruntime>=1.16.0
+
+# PyTorch and torchvision (for transforms only, not training)
+# These are lighter versions suitable for Raspberry Pi
+torch>=2.0.0
+torchvision>=0.15.0
+
+# GPIO control for servo motor
+RPi.GPIO>=0.7.1
+
+# Optional: for better performance monitoring
+psutil>=5.9.0
