@@ -8,7 +8,7 @@ from torchvision import datasets, models, transforms
 
 BATCH_SIZE = 32
 IMG_SIZE = (224, 224)
-NUM_EPOCHS = 10  # Change this thing if things are bad
+NUM_EPOCHS = 3  # Change this thing if things are bad
 LEARNING_RATE = 0.001
 MODEL_SAVE_PATH = "potato_rock_classifier.pth"
 
@@ -73,13 +73,13 @@ for param in model.parameters():
 
 # Rebuild the classifier head for our specific task.
 # This is a robust way to avoid type-checking issues with in-place modification.
-num_ftrs = model.classifier[0].in_features
+num_ftrs = model.classifier[0].in_features  # The ammount of outputs of the head - 960.
 model.classifier = nn.Sequential(
     nn.Linear(num_ftrs, 256),  # Thinking layer.
     nn.Hardswish(),  # Activator. Adds non linearity. It's a bit weird to explain, but basically "if it's interesting, amplify it, if not, squash it."
     nn.Dropout(
         p=0.2, inplace=True
-    ),  # Randomly drop some neurons to prevent overfitting
+    ),  # Randomly drop some neurons to prevent overfitting.
     nn.Linear(256, num_classes),  # Final decision layer.
     # 256 is good enough here. It's a 3 class clasifier!
 )
@@ -94,7 +94,7 @@ criterion = nn.CrossEntropyLoss()
 # Just touch the outer
 # If I were to optim the whole model, it would look like
 # optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-# But training the body is the important part. The head is good enough.
+# But training the body is the important part. The head is pretty good.
 optimizer = optim.Adam(model.classifier.parameters(), lr=LEARNING_RATE)
 
 
@@ -137,6 +137,8 @@ torch.save(model.state_dict(), MODEL_SAVE_PATH)
 print("Model saved successfully.")
 
 # Now, to export to onnx
+model.eval()
+
 torch.onnx.export(
     model,
     (torch.rand(1, 3, 224, 224).to(device)),
