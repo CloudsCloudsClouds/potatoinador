@@ -8,7 +8,7 @@ from torchvision import datasets, models, transforms
 
 BATCH_SIZE = 32
 IMG_SIZE = (224, 224)
-NUM_EPOCHS = 3  # Change this thing if things are bad
+NUM_EPOCHS = 10  # Change this thing if things are bad
 LEARNING_RATE = 0.001
 MODEL_SAVE_PATH = "potato_rock_classifier.pth"
 
